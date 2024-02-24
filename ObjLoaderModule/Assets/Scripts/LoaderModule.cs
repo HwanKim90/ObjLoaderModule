@@ -2,17 +2,47 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
 using UnityEngine;
 
 public class LoaderModule : MonoBehaviour
 {
+    List<Vector3> vertices = new List<Vector3>();
+    List<Vector2> uvs = new List<Vector2>();
+    List<Vector3> normals = new List<Vector3>();
+
+    List<int> triangles = new List<int>();
+
     public event Action<GameObject> OnLoadCompleted;
 
-    private List<Vector3> vertices = new List<Vector3>();
-    private List<Vector2> textures = new List<Vector2>();
-    private List<Vector3> normals = new List<Vector3>();
+    public void LoadAsset(string path)
+    {
+        Mesh mesh = new Mesh();
+        ReadObjFile(path);
 
-    private List<int> triangles = new List<int>();
+        AssignToMesh(mesh, vertices, uvs, normals, triangles);
+
+        mesh.RecalculateBounds();
+        mesh.RecalculateNormals();
+
+        GameObject meshObject = CreateMeshGameObject(mesh);
+        OnLoadCompleted?.Invoke(meshObject);
+    }
+
+    public async Task<GameObject> LoadAssetAsync(string path)
+    {
+        Mesh mesh = new Mesh();
+        await Task.Run(() => ReadObjFile(path));
+
+        AssignToMesh(mesh, vertices, uvs, normals, triangles);
+
+        mesh.RecalculateBounds();
+        mesh.RecalculateNormals();
+
+        GameObject meshObject = CreateMeshGameObject(mesh);
+
+        return meshObject;
+    }
 
     public void ReadObjFile(string filePath)
     {
@@ -21,37 +51,64 @@ public class LoaderModule : MonoBehaviour
             string line;
             while ((line = reader.ReadLine()) != null)
             {
-                if (line.StartsWith("v "))
-                {
-                    Vector3 vertex = ParseVector3(line.Substring(2));
-                    vertices.Add(vertex);
-
-                }
-                else if (line.StartsWith("vt "))
-                {
-                    Vector2 uv = ParseVector2(line.Substring(3));
-                    textures.Add(uv);
-                }
-                else if (line.StartsWith("vn "))
-                {
-                    Vector3 normal = ParseVector3(line.Substring(3));
-                    normals.Add(normal);
-                }
-                else if (line.StartsWith("f "))
-                {
-                    string[] parts = line.Substring(2).Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                    for (int i = 1; i < parts.Length - 1; i++)
-                    {
-                        // 첫 번째 정점 인덱스 (OBJ 인덱스는 1부터 시작하므로 1을 빼서 Unity 인덱스로 변환)
-                        triangles.Add(int.Parse(parts[0].Split('/')[0]) - 1);
-                        // 현재 정점 인덱스
-                        triangles.Add(int.Parse(parts[i].Split('/')[0]) - 1);
-                        // 다음 정점 인덱스
-                        triangles.Add(int.Parse(parts[i + 1].Split('/')[0]) - 1);
-                    }
-                }
+                ProcessLine(line, vertices, uvs, normals, triangles);
             }
         }
+    }
+
+    private void ProcessLine(string line, List<Vector3> vertices, List<Vector2> uvs, List<Vector3> normals, List<int> triangles)
+    {
+        if (line.StartsWith("v "))
+        {
+            vertices.Add(ParseVector3(line.Substring(2)));
+        }
+        else if (line.StartsWith("vt "))
+        {
+            uvs.Add(ParseVector2(line.Substring(3)));
+        }
+        else if (line.StartsWith("vn "))
+        {
+            normals.Add(ParseVector3(line.Substring(3)));
+        }
+        else if (line.StartsWith("f "))
+        {
+            string[] parts = line.Substring(2).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            for (int i = 1; i < parts.Length - 1; i++)
+            {
+                triangles.Add(int.Parse(parts[0].Split('/')[0]) - 1);
+                triangles.Add(int.Parse(parts[i].Split('/')[0]) - 1);
+                triangles.Add(int.Parse(parts[i + 1].Split('/')[0]) - 1);
+            }
+        }
+    }
+
+    private void AssignToMesh(Mesh mesh, List<Vector3> vertices, List<Vector2> uvs, List<Vector3> normals, List<int> triangles)
+    {
+        Vector2[] uv = new Vector2[vertices.Count];
+        Vector3[] normal = new Vector3[vertices.Count];
+
+        for (int i = 0; i < vertices.Count; i++)
+        {
+            uv[i] = (i < uvs.Count) ? uvs[i] : Vector2.zero;
+            normal[i] = (i < normals.Count) ? normals[i] : new Vector3(0, 0, 1);
+        }
+
+        mesh.SetVertices(vertices);
+        mesh.SetUVs(0, uv);
+        mesh.SetNormals(normal);
+        mesh.SetTriangles(triangles, 0);
+    }
+
+    private GameObject CreateMeshGameObject(Mesh mesh)
+    {
+        GameObject meshObject = new GameObject("Model");
+        MeshFilter meshFilter = meshObject.AddComponent<MeshFilter>();
+        MeshRenderer meshRenderer = meshObject.AddComponent<MeshRenderer>();
+
+        meshFilter.mesh = mesh;
+        meshRenderer.material = new Material(Shader.Find("Standard"));
+
+        return meshObject;
     }
 
     private Vector3 ParseVector3(string line)
@@ -73,54 +130,6 @@ public class LoaderModule : MonoBehaviour
         return new Vector2(u, v);
     }
 
-    public void LoadAsset(string path)
-    {
-        ReadObjFile(path);
-
-        Mesh mesh = new Mesh();
-        mesh.vertices = vertices.ToArray(); 
-
-        Vector2[] uv = new Vector2[vertices.Count];
-        for (int i = 0; i < uv.Length; i++)
-        {
-            if (i < textures.Count)
-            {
-                uv[i] = textures[i];
-            }
-            else
-            {
-                uv[i] = Vector2.zero;
-            }
-        }
-        mesh.uv = uv; 
-
-        Vector3[] normal = new Vector3[vertices.Count];
-        for (int i = 0; i < normal.Length; i++)
-        {
-            if (i < normals.Count)
-            {
-                normal[i] = normals[i];
-            }
-            else
-            {
-                normal[i] = Vector3.zero;
-            }
-        }
-        mesh.normals = normal;
-
-        mesh.triangles = triangles.ToArray(); 
-       
-        mesh.RecalculateBounds();
-        mesh.RecalculateNormals();
-
-        GameObject meshObject = new GameObject("Model");
-        MeshFilter meshFilter = meshObject.AddComponent<MeshFilter>();
-        MeshRenderer meshRenderer = meshObject.AddComponent<MeshRenderer>();
-        meshFilter.mesh = mesh;
-        meshRenderer.material = new Material(Shader.Find("Standard")); // 기본 재질 할당
-
-        OnLoadCompleted?.Invoke(meshObject);
-    }
-
+    
 
 }

@@ -12,7 +12,6 @@ public class AssetLoader : MonoBehaviour
     {
         string selectedAssetName = EditorUtility.OpenFilePanel("Select obj model", "", "obj");
         Load(selectedAssetName);
-        //loaderModule.ReadObjFile(selectedAssetName);
     }
 
     public void Load(string assetName)
