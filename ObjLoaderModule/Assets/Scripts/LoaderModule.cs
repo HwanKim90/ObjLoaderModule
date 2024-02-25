@@ -11,7 +11,7 @@ public class LoaderModule : MonoBehaviour
     public List<Vector2> uvs = new List<Vector2>();
     public List<Vector3> normals = new List<Vector3>();
 
-    List<int> triangles = new List<int>();
+    public List<int> triangles = new List<int>();
 
     public event Action<GameObject> OnLoadCompleted;
 
@@ -72,50 +72,47 @@ public class LoaderModule : MonoBehaviour
         }
         else if (line.StartsWith("f "))
         {
-            //string[] parts = line.Substring(2).Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            //for (int i = 1; i < parts.Length - 1; i++)
-            //{
-            //    triangles.Add(int.Parse(parts[0].Split('/')[0]) - 1);
-            //    triangles.Add(int.Parse(parts[i].Split('/')[0]) - 1);
-            //    triangles.Add(int.Parse(parts[i + 1].Split('/')[0]) - 1);
-            //}
-
-            ProcessFaceLine(line, triangles);
+            ProcessFaceLine(line, triangles, uvs, normals);
         }
     }
 
-    private void ProcessFaceLine(string line, List<int> triangles, List<int> textureIndices = null, List<int> normalIndices = null)
+    private void ProcessFaceLine(string line, List<int> triangles, List<Vector2> uvs, List<Vector3> normals)
     {
         string[] parts = line.Substring(2).Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
         for (int i = 1; i < parts.Length - 1; i++)
         {
-            string[] vertex1 = parts[0].Split('/');
-            string[] vertex2 = parts[i].Split('/');
-            string[] vertex3 = parts[i + 1].Split('/');
+            int v1 = int.Parse(parts[0].Split('/')[0]) - 1;
+            int v2 = int.Parse(parts[i].Split('/')[0]) - 1;
+            int v3 = int.Parse(parts[i + 1].Split('/')[0]) - 1;
 
-            // 정점 인덱스 처리
-            triangles.Add(int.Parse(vertex1[0]) - 1);
-            triangles.Add(int.Parse(vertex2[0]) - 1);
-            triangles.Add(int.Parse(vertex3[0]) - 1);
+            triangles.Add(v1);
+            triangles.Add(v2);
+            triangles.Add(v3);
 
-            if (textureIndices != null && vertex1.Length > 1 && !string.IsNullOrEmpty(vertex1[1]))
+            if (parts[0].Split('/').Length > 1 && parts[0].Split('/')[1] != "")
             {
-                textureIndices.Add(int.Parse(vertex1[1]) - 1);
-                textureIndices.Add(int.Parse(vertex2[1]) - 1);
-                textureIndices.Add(int.Parse(vertex3[1]) - 1);
+                int uv1 = int.Parse(parts[0].Split('/')[1]) - 1;
+                int uv2 = int.Parse(parts[i].Split('/')[1]) - 1;
+                int uv3 = int.Parse(parts[i + 1].Split('/')[1]) - 1;
+
+                uvs.Add(this.uvs[uv1]);
+                uvs.Add(this.uvs[uv2]);
+                uvs.Add(this.uvs[uv3]);
             }
 
-            int normalIndexPosition = vertex1.Length - 1;  
-            if (normalIndices != null && !string.IsNullOrEmpty(vertex1[normalIndexPosition]))
+            if (parts[0].Split('/').Length > 2 && parts[0].Split('/')[2] != "")
             {
-                normalIndices.Add(int.Parse(vertex1[normalIndexPosition]) - 1);
-                normalIndices.Add(int.Parse(vertex2[normalIndexPosition]) - 1);
-                normalIndices.Add(int.Parse(vertex3[normalIndexPosition]) - 1);
+                int n1 = int.Parse(parts[0].Split('/')[2]) - 1;
+                int n2 = int.Parse(parts[i].Split('/')[2]) - 1;
+                int n3 = int.Parse(parts[i + 1].Split('/')[2]) - 1;
+
+                normals.Add(this.normals[n1]);
+                normals.Add(this.normals[n2]);
+                normals.Add(this.normals[n3]);
             }
         }
     }
-
 
     private void AssignToMesh(Mesh mesh, List<Vector3> vertices, List<Vector2> uvs, List<Vector3> normals, List<int> triangles)
     {
@@ -132,6 +129,7 @@ public class LoaderModule : MonoBehaviour
         mesh.SetUVs(0, uv);
         mesh.SetNormals(normal);
         mesh.SetTriangles(triangles, 0);
+
     }
 
     private GameObject CreateMeshGameObject(Mesh mesh)
@@ -169,7 +167,4 @@ public class LoaderModule : MonoBehaviour
 
         return new Vector2(u, v);
     }
-
-    
-
 }
