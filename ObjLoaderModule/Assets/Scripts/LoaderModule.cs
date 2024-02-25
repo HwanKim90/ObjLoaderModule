@@ -7,9 +7,9 @@ using UnityEngine;
 
 public class LoaderModule : MonoBehaviour
 {
-    List<Vector3> vertices = new List<Vector3>();
-    List<Vector2> uvs = new List<Vector2>();
-    List<Vector3> normals = new List<Vector3>();
+    public List<Vector3> vertices = new List<Vector3>();
+    public List<Vector2> uvs = new List<Vector2>();
+    public List<Vector3> normals = new List<Vector3>();
 
     List<int> triangles = new List<int>();
 
@@ -72,15 +72,50 @@ public class LoaderModule : MonoBehaviour
         }
         else if (line.StartsWith("f "))
         {
-            string[] parts = line.Substring(2).Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            for (int i = 1; i < parts.Length - 1; i++)
+            //string[] parts = line.Substring(2).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            //for (int i = 1; i < parts.Length - 1; i++)
+            //{
+            //    triangles.Add(int.Parse(parts[0].Split('/')[0]) - 1);
+            //    triangles.Add(int.Parse(parts[i].Split('/')[0]) - 1);
+            //    triangles.Add(int.Parse(parts[i + 1].Split('/')[0]) - 1);
+            //}
+
+            ProcessFaceLine(line, triangles);
+        }
+    }
+
+    private void ProcessFaceLine(string line, List<int> triangles, List<int> textureIndices = null, List<int> normalIndices = null)
+    {
+        string[] parts = line.Substring(2).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+        for (int i = 1; i < parts.Length - 1; i++)
+        {
+            string[] vertex1 = parts[0].Split('/');
+            string[] vertex2 = parts[i].Split('/');
+            string[] vertex3 = parts[i + 1].Split('/');
+
+            // 정점 인덱스 처리
+            triangles.Add(int.Parse(vertex1[0]) - 1);
+            triangles.Add(int.Parse(vertex2[0]) - 1);
+            triangles.Add(int.Parse(vertex3[0]) - 1);
+
+            if (textureIndices != null && vertex1.Length > 1 && !string.IsNullOrEmpty(vertex1[1]))
             {
-                triangles.Add(int.Parse(parts[0].Split('/')[0]) - 1);
-                triangles.Add(int.Parse(parts[i].Split('/')[0]) - 1);
-                triangles.Add(int.Parse(parts[i + 1].Split('/')[0]) - 1);
+                textureIndices.Add(int.Parse(vertex1[1]) - 1);
+                textureIndices.Add(int.Parse(vertex2[1]) - 1);
+                textureIndices.Add(int.Parse(vertex3[1]) - 1);
+            }
+
+            int normalIndexPosition = vertex1.Length - 1;  
+            if (normalIndices != null && !string.IsNullOrEmpty(vertex1[normalIndexPosition]))
+            {
+                normalIndices.Add(int.Parse(vertex1[normalIndexPosition]) - 1);
+                normalIndices.Add(int.Parse(vertex2[normalIndexPosition]) - 1);
+                normalIndices.Add(int.Parse(vertex3[normalIndexPosition]) - 1);
             }
         }
     }
+
 
     private void AssignToMesh(Mesh mesh, List<Vector3> vertices, List<Vector2> uvs, List<Vector3> normals, List<int> triangles)
     {
@@ -107,6 +142,11 @@ public class LoaderModule : MonoBehaviour
 
         meshFilter.mesh = mesh;
         meshRenderer.material = new Material(Shader.Find("Standard"));
+
+        vertices.Clear();
+        uvs.Clear();
+        normals.Clear();
+        triangles.Clear();
 
         return meshObject;
     }

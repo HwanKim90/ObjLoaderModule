@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
@@ -23,6 +21,5 @@ public class AssetLoader : MonoBehaviour
     private void OnLoadCompleted(GameObject loadedAsset)
     {
         loadedAsset.transform.SetParent(transform);
-        // To do
     }
 }
