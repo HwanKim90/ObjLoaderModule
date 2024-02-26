@@ -7,23 +7,22 @@ using UnityEngine;
 
 public class LoaderModule : MonoBehaviour
 {
-    public List<Vector3> vertices = new List<Vector3>();
-    public List<Vector2> uvs = new List<Vector2>();
-    public List<Vector3> normals = new List<Vector3>();
-
-    public List<int> triangles = new List<int>();
-
     public event Action<GameObject> OnLoadCompleted;
+
+    List<Vector3> vertices = new List<Vector3>();
+    List<Vector2> uvs = new List<Vector2>();
+    List<Vector3> normals = new List<Vector3>();
+    List<int> triangles = new List<int>();
 
     public void LoadAsset(string path)
     {
+        List<int> normalIndices = new List<int>();
+        List<int> uvIndices = new List<int>();
+
         Mesh mesh = new Mesh();
         ReadObjFile(path);
 
         AssignToMesh(mesh, vertices, uvs, normals, triangles);
-
-        mesh.RecalculateBounds();
-        mesh.RecalculateNormals();
 
         GameObject meshObject = CreateMeshGameObject(mesh);
         OnLoadCompleted?.Invoke(meshObject);
@@ -32,12 +31,10 @@ public class LoaderModule : MonoBehaviour
     public async Task<GameObject> LoadAssetAsync(string path)
     {
         Mesh mesh = new Mesh();
+        //await ReadObjFileAsync(path);
         await Task.Run(() => ReadObjFile(path));
 
         AssignToMesh(mesh, vertices, uvs, normals, triangles);
-
-        mesh.RecalculateBounds();
-        mesh.RecalculateNormals();
 
         GameObject meshObject = CreateMeshGameObject(mesh);
 
@@ -56,6 +53,19 @@ public class LoaderModule : MonoBehaviour
         }
     }
 
+    public async Task ReadObjFileAsync(string filePath)
+    {
+        using (StreamReader reader = new StreamReader(filePath))
+        {
+            string line;
+            while ((line = await reader.ReadLineAsync()) != null)
+            {
+                ProcessLine(line, vertices, uvs, normals, triangles);
+            }
+        }
+    }
+
+
     private void ProcessLine(string line, List<Vector3> vertices, List<Vector2> uvs, List<Vector3> normals, List<int> triangles)
     {
         if (line.StartsWith("v "))
@@ -72,11 +82,11 @@ public class LoaderModule : MonoBehaviour
         }
         else if (line.StartsWith("f "))
         {
-            ProcessFaceLine(line, triangles, uvs, normals);
+            ProcessFaceLine(line, triangles);
         }
     }
 
-    private void ProcessFaceLine(string line, List<int> triangles, List<Vector2> uvs, List<Vector3> normals)
+    private void ProcessFaceLine(string line, List<int> triangles)
     {
         string[] parts = line.Substring(2).Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
@@ -89,28 +99,6 @@ public class LoaderModule : MonoBehaviour
             triangles.Add(v1);
             triangles.Add(v2);
             triangles.Add(v3);
-
-            if (parts[0].Split('/').Length > 1 && parts[0].Split('/')[1] != "")
-            {
-                int uv1 = int.Parse(parts[0].Split('/')[1]) - 1;
-                int uv2 = int.Parse(parts[i].Split('/')[1]) - 1;
-                int uv3 = int.Parse(parts[i + 1].Split('/')[1]) - 1;
-
-                uvs.Add(this.uvs[uv1]);
-                uvs.Add(this.uvs[uv2]);
-                uvs.Add(this.uvs[uv3]);
-            }
-
-            if (parts[0].Split('/').Length > 2 && parts[0].Split('/')[2] != "")
-            {
-                int n1 = int.Parse(parts[0].Split('/')[2]) - 1;
-                int n2 = int.Parse(parts[i].Split('/')[2]) - 1;
-                int n3 = int.Parse(parts[i + 1].Split('/')[2]) - 1;
-
-                normals.Add(this.normals[n1]);
-                normals.Add(this.normals[n2]);
-                normals.Add(this.normals[n3]);
-            }
         }
     }
 
@@ -129,6 +117,9 @@ public class LoaderModule : MonoBehaviour
         mesh.SetUVs(0, uv);
         mesh.SetNormals(normal);
         mesh.SetTriangles(triangles, 0);
+
+        mesh.RecalculateBounds();
+        mesh.RecalculateNormals();
 
     }
 
