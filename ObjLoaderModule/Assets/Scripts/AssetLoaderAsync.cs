@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
@@ -9,14 +11,14 @@ public class AssetLoaderAsync : MonoBehaviour
 
     private async void Start()
     {
-        string selectedAssetName = EditorUtility.OpenFilePanel("Select obj model", "", "obj");
+        //string currentDir = Directory.GetCurrentDirectory();
+        //string modelDirPath = Path.Combine(currentDir, "Assets", "Models");
 
-        await Load(selectedAssetName);
+        //string selectedAssetName = EditorUtility.OpenFilePanel("Select obj model", modelDirPath, "obj");
 
-        //for (int i = 0; i < 20; i++)
-        //{
-        //    await Load(selectedAssetName);
-        //}
+        //await Load(selectedAssetName);
+
+        await MultiLoad();
     }
 
     public async Task Load(string assetName)
@@ -24,4 +26,18 @@ public class AssetLoaderAsync : MonoBehaviour
         GameObject loadedAsset = await loaderModule.LoadAssetAsync(assetName);
         loadedAsset.transform.SetParent(transform);
     }
+
+    private async Task MultiLoad()
+    {
+        string currentDir = Directory.GetCurrentDirectory();
+        string modelDirPath = Path.Combine(currentDir, "Assets", "Models");
+        string[] objFiles = Directory.GetFiles(modelDirPath, "*.obj");
+
+        foreach (string objFile in objFiles)
+        {
+            await Load(objFile);
+        }
+    }
+
+    
 }

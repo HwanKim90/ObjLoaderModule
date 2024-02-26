@@ -1,3 +1,4 @@
+using System.IO;
 using UnityEditor;
 using UnityEngine;
 
@@ -8,7 +9,10 @@ public class AssetLoader : MonoBehaviour
 
     private void Start()
     {
-        string selectedAssetName = EditorUtility.OpenFilePanel("Select obj model", "", "obj");
+        string currentDir = Directory.GetCurrentDirectory();
+        string modelDirPath = Path.Combine(currentDir, "Assets", "Models");
+        string selectedAssetName = EditorUtility.OpenFilePanel("Select obj model", modelDirPath, "obj");
+
         Load(selectedAssetName);
     }
 

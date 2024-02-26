@@ -31,7 +31,7 @@ public class LoaderModule : MonoBehaviour
     public async Task<GameObject> LoadAssetAsync(string path)
     {
         Mesh mesh = new Mesh();
-        //await ReadObjFileAsync(path);
+        
         await Task.Run(() => ReadObjFile(path));
 
         AssignToMesh(mesh, vertices, uvs, normals, triangles);
@@ -52,19 +52,6 @@ public class LoaderModule : MonoBehaviour
             }
         }
     }
-
-    public async Task ReadObjFileAsync(string filePath)
-    {
-        using (StreamReader reader = new StreamReader(filePath))
-        {
-            string line;
-            while ((line = await reader.ReadLineAsync()) != null)
-            {
-                ProcessLine(line, vertices, uvs, normals, triangles);
-            }
-        }
-    }
-
 
     private void ProcessLine(string line, List<Vector3> vertices, List<Vector2> uvs, List<Vector3> normals, List<int> triangles)
     {
