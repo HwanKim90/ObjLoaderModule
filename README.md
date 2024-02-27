@@ -240,5 +240,6 @@ private async Task ReadObjFileAsync(string filePath, List<Vector3> vertices, Lis
 }
 ```
 - 각각의 LoadAssetAsync함수가 자신만의 로컬 상태(즉, 각 파일의 vertices, uvs, normals, triangles 리스트)를 가지고 있도록 함으로써, 동시에 여러 파일을 로딩하더라도 각 작업이 서로에게 영향을 주지 않도록 함. 이는 각각의 비동기 로딩 작업이 독립적으로 파일을 처리할 수 있게 하여, 동시성 문제를 해결할 수 있음
+- TaskRun함수에서 StreamReader의 ReadLineAsync함수 사용으로 변경, 비동기 I/O 작업의 효율성과 스레드 관리 측면에서 대규모 파일 로딩에서애플리케이션의 응답성을 유지하고, 시스템 자원을 더 효율적으로 사용할 수 있기때문
 
 
