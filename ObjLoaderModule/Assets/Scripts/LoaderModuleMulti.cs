@@ -1,46 +1,34 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using UnityEngine;
 
-public class LoaderModule : MonoBehaviour
+public class LoaderModuleMulti : MonoBehaviour
 {
-    public event Action<GameObject> OnLoadCompleted;
-
-    List<Vector3> vertices = new List<Vector3>();
-    List<Vector2> uvs = new List<Vector2>();
-    List<Vector3> normals = new List<Vector3>();
-    List<int> triangles = new List<int>();
-
-    public void LoadAsset(string path)
+    public async Task LoadAssetsAsync(string[] paths)
     {
-        Mesh mesh = new Mesh();
+        List<Task<GameObject>> loadTasks = new List<Task<GameObject>>();
 
-        try
+        foreach (var path in paths)
         {
-            ReadObjFile(path);
-            AssignToMesh(mesh, vertices, uvs, normals, triangles);
-
-            GameObject meshObject = CreateMeshGameObject(mesh);
-            OnLoadCompleted?.Invoke(meshObject);
-
+            loadTasks.Add(LoadAssetAsync(path));
         }
-        catch (Exception e)
-        {
-            Debug.LogException(e);
-        }
+
+        await Task.WhenAll(loadTasks);
     }
 
-    public async Task<GameObject> LoadAssetAsync(string path)
+    private async Task<GameObject> LoadAssetAsync(string path)
     {
         Mesh mesh = new Mesh();
-        
+        List<Vector3> vertices = new List<Vector3>();
+        List<Vector2> uvs = new List<Vector2>();
+        List<Vector3> normals = new List<Vector3>();
+        List<int> triangles = new List<int>();
+
         try
         {
-            //await Task.Run(() => ReadObjFile(path));
-            await ReadObjFileAsync(path);
+            await ReadObjFileAsync(path, vertices, uvs, normals, triangles);
 
             AssignToMesh(mesh, vertices, uvs, normals, triangles);
 
@@ -54,38 +42,7 @@ public class LoaderModule : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// obj 파일 데이터를 읽어오는 함수
-    /// </summary>
-    /// <param name="filePath"></param>
-    private void ReadObjFile(string filePath)
-    {
-        using (StreamReader reader = new StreamReader(filePath))
-        {
-            string line;
-            while ((line = reader.ReadLine()) != null)
-            {
-                if (line.StartsWith("v "))
-                {
-                    vertices.Add(ParseVector3(line.Substring(2)));
-                }
-                else if (line.StartsWith("vt "))
-                {
-                    uvs.Add(ParseVector2(line.Substring(3)));
-                }
-                else if (line.StartsWith("vn "))
-                {
-                    normals.Add(ParseVector3(line.Substring(3)));
-                }
-                else if (line.StartsWith("f "))
-                {
-                    ProcessFaceLine(line, triangles);
-                }
-            }
-        }
-    }
-
-    private async Task ReadObjFileAsync(string filePath)
+    private async Task ReadObjFileAsync(string filePath, List<Vector3> vertices, List<Vector2> uvs, List<Vector3> normals, List<int> triangles)
     {
         using (StreamReader reader = new StreamReader(filePath))
         {
@@ -112,12 +69,6 @@ public class LoaderModule : MonoBehaviour
         }
     }
 
-
-    /// <summary>
-    /// 면 데이터에 vertex정보를 가지고와서 triangles에 저장하는 함수
-    /// </summary>
-    /// <param name="line"></param>
-    /// <param name="triangles"></param>
     private void ProcessFaceLine(string line, List<int> triangles)
     {
         string[] parts = line.Substring(2).Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -133,15 +84,7 @@ public class LoaderModule : MonoBehaviour
             triangles.Add(v3);
         }
     }
-
-    /// <summary>
-    /// 메쉬에 데이터 정보를 넣고, uvs와 normal 데이터 수를 vertex수와 맞추는 함수
-    /// </summary>
-    /// <param name="mesh"></param>
-    /// <param name="vertices"></param>
-    /// <param name="uvs"></param>
-    /// <param name="normals"></param>
-    /// <param name="triangles"></param>
+   
     private void AssignToMesh(Mesh mesh, List<Vector3> vertices, List<Vector2> uvs, List<Vector3> normals, List<int> triangles)
     {
         Vector2[] uv = new Vector2[vertices.Count];
@@ -160,19 +103,8 @@ public class LoaderModule : MonoBehaviour
 
         mesh.RecalculateBounds();
         mesh.RecalculateNormals();
-
-        vertices.Clear();
-        uvs.Clear();
-        normals.Clear();
-        triangles.Clear();
     }
 
-
-    /// <summary>
-    /// 메쉬 데이터를 이용해서 게임오브젝트를 만드는 함수
-    /// </summary>
-    /// <param name="mesh"></param>
-    /// <returns></returns>
     private GameObject CreateMeshGameObject(Mesh mesh)
     {
         GameObject meshObject = new GameObject("Model");
@@ -185,11 +117,6 @@ public class LoaderModule : MonoBehaviour
         return meshObject;
     }
 
-    /// <summary>
-    /// Vertext와 Normal데이터를 Vector3로 파싱하는 함수
-    /// </summary>
-    /// <param name="line"></param>
-    /// <returns></returns>
     private Vector3 ParseVector3(string line)
     {
         string[] values = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -200,11 +127,6 @@ public class LoaderModule : MonoBehaviour
         return new Vector3(x, y, z);
     }
 
-    /// <summary>
-    /// UV데이터를 Vector2로 파싱하는 함수
-    /// </summary>
-    /// <param name="line"></param>
-    /// <returns></returns>
     private Vector2 ParseVector2(string line)
     {
         string[] values = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
@@ -11,14 +12,14 @@ public class AssetLoaderAsync : MonoBehaviour
 
     private async void Start()
     {
-        //string currentDir = Directory.GetCurrentDirectory();
-        //string modelDirPath = Path.Combine(currentDir, "Assets", "Models");
+        string currentDir = Directory.GetCurrentDirectory();
+        string modelDirPath = Path.Combine(currentDir, "Assets", "Models");
 
-        //string selectedAssetName = EditorUtility.OpenFilePanel("Select obj model", modelDirPath, "obj");
+        string selectedAssetName = EditorUtility.OpenFilePanel("Select obj model", modelDirPath, "obj");
 
-        //await Load(selectedAssetName);
+        await Load(selectedAssetName);
 
-        await MultiLoad();
+        //await MultiLoad();
     }
 
     public async Task Load(string assetName)
@@ -27,17 +28,13 @@ public class AssetLoaderAsync : MonoBehaviour
         loadedAsset.transform.SetParent(transform);
     }
 
-    private async Task MultiLoad()
-    {
-        string currentDir = Directory.GetCurrentDirectory();
-        string modelDirPath = Path.Combine(currentDir, "Assets", "Models");
-        string[] objFiles = Directory.GetFiles(modelDirPath, "*.obj");
+    //private async Task MultiLoad()
+    //{
+    //    string currentDir = Directory.GetCurrentDirectory();
+    //    string modelDirPath = Path.Combine(currentDir, "Assets", "Models");
+    //    string[] objFiles = Directory.GetFiles(modelDirPath, "*.obj");
 
-        foreach (string objFile in objFiles)
-        {
-            await Load(objFile);
-        }
-    }
-
-    
+    //    var loadTasks = objFiles.Select(objFile => Load(objFile)).ToArray();
+    //    await Task.WhenAll(loadTasks);
+    //}
 }
